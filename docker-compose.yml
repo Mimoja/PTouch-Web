@@ -1,0 +1,9 @@
+version: "3.3"
+services:
+  ptouch-web:
+    build: .
+    ports:
+      - 8080:8080
+    devices:
+      - /dev/rfcomm0
+    command: /app/ptouch-web /dev/rfcomm0
