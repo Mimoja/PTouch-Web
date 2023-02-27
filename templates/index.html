@@ -14,7 +14,7 @@
 			</table>
 			{{end}}
 			{{else}}
-				<p class="alert alert-warning">Printer did not is not connected! Tape width set to font width</p>
+				<p class="alert alert-warning">Printer did not connect! Tape width set to font width</p>
 			{{end}}
 			{{if .err}}
 				<p class="alert alert-warning" role="alert">{{.err}}</p>
@@ -34,7 +34,7 @@
 						<input class="form-control" type="number" id="fontsize" name="fontsize" value="{{.fontsize}}">
 				</div>
 				<div class="mb-1">
-					<label class="form-label" for="print">Chain:</label>
+					<label class="form-label" for="chain">Chain:</label>
 					<input class="form-check-input" type="checkbox" id="chain" name="chain" value="checked" {{if .chain}} checked {{end}}>
 				</div>
 				<input type="submit"  class="btn btn-primary" value="Preview">
