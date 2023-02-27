@@ -13,6 +13,8 @@
 				<tr><td>TapeWidth</td><td>{{.status.TapeWidth}}</td></tr>
 			</table>
 			{{end}}
+			{{else}}
+				<p class="alert alert-warning">Printer did not is not connected! Tape width set to font width</p>
 			{{end}}
 			{{if .err}}
 				<p class="alert alert-warning" role="alert">{{.err}}</p>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/fogleman/gg"
@@ -46,11 +47,9 @@ func openPrinter() error {
 		return err
 	}
 
-	if err != nil {
-		return (err)
-	}
-
-	fmt.Printf("%v \n", printerStatus)
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(printerStatus)
 
 	return nil
 }
@@ -190,7 +189,7 @@ func index(c *gin.Context) {
 	err = openPrinter()
 	if err != nil {
 		status["err"] = err
-	} else {
+	} else if printerStatus.Model != 0 {
 		status["connected"] = true
 		if printerStatus.TapeWidth != 0 {
 			canvas = int(printerStatus.TapeWidth * 10)
