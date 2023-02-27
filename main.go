@@ -135,7 +135,7 @@ func printLabel(chain bool) error {
 		return (err)
 	}
 
-	highDPI := false
+	highDPI := true
 	err = ser.SetExtendedMode(false, !chain, false, highDPI, false)
 	if err != nil {
 		return (err)
