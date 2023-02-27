@@ -19,6 +19,8 @@ import (
 
 func Router(r *gin.Engine) {
 	r.GET("/", index)
+	r.GET("/print", index)
+
 }
 
 var ser ptouchgo.Serial
@@ -159,14 +161,14 @@ func printLabel(chain bool) error {
 
 func index(c *gin.Context) {
 	status := gin.H{}
+	should_print := c.Request.URL.Path == "/print"
 
 	label := c.Query("label")
 	count := c.DefaultQuery("count", "1")
 	fontsize := c.DefaultQuery("fontsize", "48")
-	should_print := c.Query("print")
 	chain_print := c.Query("chain")
 
-	fmt.Printf("label: %s; count: %s; should_print =%s\n", label, count, should_print)
+	fmt.Printf("label: %s; count: %s; should_print =%s path=%s\n", label, count, should_print, c.Request.URL.Path)
 
 	if fontsize == "" {
 		fontsize = "48"
@@ -208,7 +210,7 @@ func index(c *gin.Context) {
 		copies = 1
 	}
 
-	if should_print == "checked" {
+	if should_print {
 		for i := 1; i <= copies; i++ {
 			err = printLabel(i != copies || chain_print == "checked")
 			if err != nil {
@@ -217,12 +219,18 @@ func index(c *gin.Context) {
 			}
 		}
 	}
+	if should_print {
+		url := "/?"
+		paramPairs := c.Request.URL.Query()
+		for key, values := range paramPairs {
+			url += key + "=" + values[0] + "&"
+		}
+		c.Redirect(http.StatusFound, url)
+		return
+	}
 
 	status["count"] = count
 	status["fontsize"] = fontsize
-	if should_print == "checked" {
-		status["print"] = should_print
-	}
 
 	if chain_print == "checked" {
 		status["chain"] = should_print
