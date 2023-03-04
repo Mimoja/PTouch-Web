@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/fogleman/gg"
 	"github.com/gin-gonic/gin"
@@ -29,21 +30,25 @@ func Router(r *gin.Engine) {
 
 }
 
-var ser ptouchgo.Serial
-var printerStatus *ptouchgo.Status
-var lastImage image.Image
+type SafePrinter struct {
+	lock sync.Mutex
+	ser  ptouchgo.Serial
+}
 
-func openPrinter() error {
+var printer SafePrinter
+var printerStatus *ptouchgo.Status
+
+func openPrinter(ser *ptouchgo.Serial) error {
 	args := flag.Args()
 
 	var err error
-	ser, err = ptouchgo.Open(args[0], 0, true)
+	*ser, err = ptouchgo.Open(args[0], 0, true)
 
 	if err != nil {
 		return (err)
 	}
 
-	err = ser.Reset()
+	err = printer.ser.Reset()
 	if err != nil {
 		return (err)
 	}
@@ -62,7 +67,7 @@ func openPrinter() error {
 	return nil
 }
 
-func createImage(text string, fontsize int, vheight int) {
+func createImage(text string, fontsize int, vheight int) image.Image {
 	fmt.Printf("creating image h= %d\n", vheight)
 
 	f, err := opentype.Parse(goregular.TTF)
@@ -98,14 +103,14 @@ func createImage(text string, fontsize int, vheight int) {
 	fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
 	// canvas_height/2 + (ascend / 2)
 	dc.DrawStringAnchored(text, (w+40)/2, v_pos, 0.5, 0)
-	lastImage = dc.Image()
+	return dc.Image()
 }
 
-func printLabel(chain bool) error {
-	dc := gg.NewContext(lastImage.Bounds().Dx(), 128)
+func printLabel(chain bool, img *image.Image, ser *ptouchgo.Serial) error {
+	dc := gg.NewContext((*img).Bounds().Dx(), 128)
 	dc.SetRGB(1, 1, 1)
 	dc.Clear()
-	dc.DrawImageAnchored(lastImage, 0, 128/2, 0, 0.5)
+	dc.DrawImageAnchored(*img, 0, 128/2, 0, 0.5)
 
 	data, bytesWidth, err := ptouchgo.LoadRawImage(dc.Image(), printerStatus.TapeWidth)
 	if err != nil {
@@ -205,7 +210,10 @@ func index(c *gin.Context) {
 
 	vmargin_px := 32 // default for 12mm label
 
-	err = openPrinter()
+	printer.lock.Lock()
+	defer printer.lock.Unlock()
+
+	err = openPrinter(&printer.ser)
 	if err != nil {
 		status["err"] = err
 	} else if printerStatus.Model != 0 {
@@ -217,7 +225,7 @@ func index(c *gin.Context) {
 	}
 	status["label"] = label
 
-	createImage(label, size, vmargin_px)
+	img := createImage(label, size, vmargin_px)
 
 	if count == "" {
 		count = "1"
@@ -230,7 +238,7 @@ func index(c *gin.Context) {
 
 	if should_print {
 		for i := 1; i <= copies; i++ {
-			err = printLabel(i != copies || chain_print == "checked")
+			err = printLabel(i != copies || chain_print == "checked", &img, &printer.ser)
 			if err != nil {
 				status["err"] = err
 				break
@@ -254,9 +262,9 @@ func index(c *gin.Context) {
 		status["chain"] = should_print
 	}
 
-	if lastImage != nil {
+	if img != nil {
 		// see issue https://github.com/golang/go/issues/20536 on why using URL type
-		status["image"] = template.URL(to_base64(&lastImage))
+		status["image"] = template.URL(to_base64(&img))
 	}
 
 	if printerStatus != nil {
