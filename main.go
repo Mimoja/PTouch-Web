@@ -62,8 +62,8 @@ func openPrinter() error {
 	return nil
 }
 
-func createImage(text string, fontsize int, canvas_height int) {
-	fmt.Printf("creating image h= %d\n", canvas_height)
+func createImage(text string, fontsize int, vheight int) {
+	fmt.Printf("creating image h= %d\n", vheight)
 
 	f, err := opentype.Parse(goregular.TTF)
 	if err != nil {
@@ -85,7 +85,7 @@ func createImage(text string, fontsize int, canvas_height int) {
 	w, h := dc.MeasureString(text)
 	fmt.Printf("width: %f; height: %f;\n", w, h)
 
-	dc = gg.NewContext(int(w+40), 128)
+	dc = gg.NewContext(int(w+40), vheight)
 	dc.SetRGB(1, 1, 1)
 	dc.Clear()
 	dc.SetRGB(0, 0, 0)
@@ -93,7 +93,7 @@ func createImage(text string, fontsize int, canvas_height int) {
 
 	measure := font.MeasureString(face, text)
 	metrics := face.Metrics()
-	v_pos := float64(128)/2 + (float64(metrics.CapHeight)/64)/2
+	v_pos := float64(dc.Height())/2 + (float64(metrics.CapHeight)/64)/2
 
 	fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
 	// canvas_height/2 + (ascend / 2)
@@ -102,7 +102,12 @@ func createImage(text string, fontsize int, canvas_height int) {
 }
 
 func printLabel(chain bool) error {
-	data, bytesWidth, err := ptouchgo.LoadRawImage(lastImage, printerStatus.TapeWidth)
+	dc := gg.NewContext(lastImage.Bounds().Dx(), 128)
+	dc.SetRGB(1, 1, 1)
+	dc.Clear()
+	dc.DrawImageAnchored(lastImage, 0, 128/2, 0, 0.5)
+
+	data, bytesWidth, err := ptouchgo.LoadRawImage(dc.Image(), printerStatus.TapeWidth)
 	if err != nil {
 		return err
 	}
@@ -198,7 +203,7 @@ func index(c *gin.Context) {
 		fontsize = strconv.Itoa(size)
 	}
 
-	canvas := size
+	vmargin_px := 32 // default for 12mm label
 
 	err = openPrinter()
 	if err != nil {
@@ -206,12 +211,13 @@ func index(c *gin.Context) {
 	} else if printerStatus.Model != 0 {
 		status["connected"] = true
 		if printerStatus.TapeWidth != 0 {
-			canvas = int(printerStatus.TapeWidth * 10)
+			// margin seems to scale with 128px max tape width
+			vmargin_px = int(128 * printerStatus.TapeWidth / 24)
 		}
 	}
 	status["label"] = label
 
-	createImage(label, size, canvas)
+	createImage(label, size, vmargin_px)
 
 	if count == "" {
 		count = "1"
