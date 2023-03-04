@@ -4,17 +4,19 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/fogleman/gg"
-	"github.com/gin-gonic/gin"
-	"github.com/golang/freetype/truetype"
-	"github.com/ka2n/ptouchgo"
-	_ "github.com/ka2n/ptouchgo/conn/usb"
-	"golang.org/x/image/font/gofont/goregular"
 	"image"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/fogleman/gg"
+	"github.com/gin-gonic/gin"
+	"github.com/ka2n/ptouchgo"
+	_ "github.com/ka2n/ptouchgo/conn/usb"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/font/opentype"
 )
 
 func Router(r *gin.Engine) {
@@ -59,13 +61,19 @@ func openPrinter() error {
 func createImage(text string, fontsize int, canvas_height int) {
 	fmt.Printf("creating image h= %d\n", canvas_height)
 
-	font, err := truetype.Parse(goregular.TTF)
+	f, err := opentype.Parse(goregular.TTF)
 	if err != nil {
 		panic("")
 	}
-	face := truetype.NewFace(font, &truetype.Options{
-		Size: float64(fontsize),
+
+	face, err := opentype.NewFace(f, &opentype.FaceOptions{
+		Size:    float64(fontsize),
+		DPI:     72, // 72 is default value, as such fontsize 1:1 rendered pixels
+		Hinting: font.HintingNone,
 	})
+	if err != nil {
+		panic("")
+	}
 
 	dc := gg.NewContext(100, 100)
 	dc.SetFontFace(face)
@@ -79,7 +87,13 @@ func createImage(text string, fontsize int, canvas_height int) {
 	dc.SetRGB(0, 0, 0)
 	dc.SetFontFace(face)
 
-	dc.DrawStringAnchored(text, (w+40)/2, (float64(canvas_height)/2)-(float64(h)/4), 0.5, 0.5)
+	measure := font.MeasureString(face, text)
+	metrics := face.Metrics()
+	v_pos := float64(canvas_height)/2 + (float64(metrics.CapHeight)/64)/2
+
+	fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
+	// canvas_height/2 + (ascend / 2)
+	dc.DrawStringAnchored(text, (w+40)/2, v_pos, 0.5, 0)
 	dc.SavePNG("static/img/out.png")
 
 	dc = gg.NewContext(int(w+40), 128)
@@ -88,7 +102,8 @@ func createImage(text string, fontsize int, canvas_height int) {
 	dc.SetRGB(0, 0, 0)
 	dc.SetFontFace(face)
 
-	dc.DrawStringAnchored(text, (w+40)/2, float64(128)/2-(float64(h)/4), 0.5, 0.5)
+	v_pos = float64(128)/2 + (float64(metrics.CapHeight)/64)/2
+	dc.DrawStringAnchored(text, (w+40)/2, v_pos, 0.5, 0)
 	lastImage = dc.Image()
 }
 
