@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"html/template"
 	"image"
+	"image/png"
 	"log"
 	"net/http"
 	"os"
@@ -81,7 +85,7 @@ func createImage(text string, fontsize int, canvas_height int) {
 	w, h := dc.MeasureString(text)
 	fmt.Printf("width: %f; height: %f;\n", w, h)
 
-	dc = gg.NewContext(int(w+40), canvas_height)
+	dc = gg.NewContext(int(w+40), 128)
 	dc.SetRGB(1, 1, 1)
 	dc.Clear()
 	dc.SetRGB(0, 0, 0)
@@ -89,32 +93,15 @@ func createImage(text string, fontsize int, canvas_height int) {
 
 	measure := font.MeasureString(face, text)
 	metrics := face.Metrics()
-	v_pos := float64(canvas_height)/2 + (float64(metrics.CapHeight)/64)/2
+	v_pos := float64(128)/2 + (float64(metrics.CapHeight)/64)/2
 
 	fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
 	// canvas_height/2 + (ascend / 2)
-	dc.DrawStringAnchored(text, (w+40)/2, v_pos, 0.5, 0)
-	dc.SavePNG("static/img/out.png")
-
-	dc = gg.NewContext(int(w+40), 128)
-	dc.SetRGB(1, 1, 1)
-	dc.Clear()
-	dc.SetRGB(0, 0, 0)
-	dc.SetFontFace(face)
-
-	v_pos = float64(128)/2 + (float64(metrics.CapHeight)/64)/2
 	dc.DrawStringAnchored(text, (w+40)/2, v_pos, 0.5, 0)
 	lastImage = dc.Image()
 }
 
 func printLabel(chain bool) error {
-
-	imgFile, err := os.Open("static/img/out.png")
-	if err != nil {
-		return err
-	}
-	defer imgFile.Close()
-
 	data, bytesWidth, err := ptouchgo.LoadRawImage(lastImage, printerStatus.TapeWidth)
 	if err != nil {
 		return err
@@ -172,6 +159,16 @@ func printLabel(chain bool) error {
 	}
 
 	return nil
+}
+
+func to_base64(img *image.Image) string {
+	buf := new(bytes.Buffer)
+	png.Encode(buf, *img)
+
+	mimeType := "data:image/png;base64,"
+	base := base64.StdEncoding.EncodeToString(buf.Bytes())
+
+	return mimeType + base
 }
 
 func index(c *gin.Context) {
@@ -249,6 +246,11 @@ func index(c *gin.Context) {
 
 	if chain_print == "checked" {
 		status["chain"] = should_print
+	}
+
+	if lastImage != nil {
+		// see issue https://github.com/golang/go/issues/20536 on why using URL type
+		status["image"] = template.URL(to_base64(&lastImage))
 	}
 
 	if printerStatus != nil {
