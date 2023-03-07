@@ -15,4 +15,5 @@
 # vendor/
 ptouch-web
 static/img/out.png
+static/img/fonts/*.png
 .idea

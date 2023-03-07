@@ -49,13 +49,12 @@
 			</form>
 			<br>
 			<br>
-			<br>
-			<p>All available fonts</p>
+			<p class="p-1">All available fonts</p>
 			<ul class="list-group">
 				{{range $val := .fonts}}
 				<li onclick="const urlParams = new URLSearchParams(window.location.search);
 urlParams.set('font', '{{$val}}');
-window.location='.?'+urlParams" class="list-group-item list-group-item-action">{{$val}}</li>
+window.location='.?'+urlParams" class="list-group-item list-group-item-action">{{$val}}<img src="/img/fonts/{{$val}}.png"></li>
 				{{end}}
 			</ul>
 		</div>

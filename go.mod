@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/adrg/sysfont v0.1.2
+	github.com/flopp/go-findfont v0.1.0
 	github.com/fogleman/gg v1.3.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/ka2n/ptouchgo v1.0.0
