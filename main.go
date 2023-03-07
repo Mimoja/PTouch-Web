@@ -305,11 +305,12 @@ func index(c *gin.Context) {
 	if font != "" {
 		fontPath, err = findfont.Find(font)
 		if err != nil {
+			fmt.Printf("Falling back to fontmatch")
 			foundFont := finder.Match(font)
 			fontPath = foundFont.Filename
 		}
-		font = path.Base(fontPath)
 		fmt.Printf("Found '%s' in '%s'\n", font, fontPath)
+		font = path.Base(fontPath)
 	}
 
 	if !no_fonts {
