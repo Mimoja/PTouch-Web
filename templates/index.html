@@ -16,6 +16,9 @@
 			{{else}}
 				<p class="alert alert-warning">Printer did not connect! Tape width set to font width</p>
 			{{end}}
+			<p>Suggested sizes:</p>
+			<p>Ubuntu-L.ttf for 12mm labels in size 48</p>
+			<p>Ubuntu-R.ttf for 9mm labels in size 32</p>
 			{{if .err}}
 				<p class="alert alert-warning" role="alert">{{.err}}</p>
 			{{end}}
