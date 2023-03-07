@@ -114,6 +114,7 @@ func createImage(text string, font_path string, fontsize int, vheight int, trans
 	if err != nil {
 		return nil, err
 	}
+	defer face.Close()
 
 	dc := gg.NewContext(100, 100)
 	dc.SetFontFace(face)
