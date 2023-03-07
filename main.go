@@ -212,27 +212,40 @@ func to_base64(img *image.Image) string {
 }
 
 func index(c *gin.Context) {
+	var err error
 	status := gin.H{}
 	should_print := c.Request.URL.Path == "/print"
 
 	label := c.Query("label")
 	count := c.DefaultQuery("count", "1")
-	fontsize := c.DefaultQuery("fontsize", "32")
+	defaultFontSize := 32
+	if printerStatus.TapeWidth != 0 {
+		// margin seems to scale with 128px max tape width
+		if printerStatus.TapeWidth == 9 {
+			defaultFontSize = 32
+		} else if printerStatus.TapeWidth == 12 {
+			defaultFontSize = 48
+		} else {
+			defaultFontSize = int(48 / 12 * printerStatus.TapeWidth)
+		}
+	}
+
+	fontsize := c.DefaultQuery("fontsize", strconv.Itoa(defaultFontSize))
 	chain_print := c.Query("chain")
 
 	fmt.Printf("label: %s; count: %s; should_print =%b path=%s\n", label, count, should_print, c.Request.URL.Path)
 
+	size := 0
 	if fontsize == "" {
-		fontsize = "48"
+		fontsize = strconv.Itoa(defaultFontSize)
+		size = defaultFontSize
+	} else {
+		size, err = strconv.Atoi(fontsize)
+		if err != nil {
+			size = defaultFontSize
+			fontsize = strconv.Itoa(size)
+		}
 	}
-
-	size, err := strconv.Atoi(fontsize)
-
-	if err != nil {
-		size = 48
-		fontsize = strconv.Itoa(size)
-	}
-
 	if size > 240 {
 		size = 240
 		fontsize = strconv.Itoa(size)
