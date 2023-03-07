@@ -52,7 +52,7 @@ func openPrinter(ser *ptouchgo.Serial) error {
 	args := flag.Args()
 
 	var err error
-	if !printer.connected {
+	if !printer.connected || ser == nil {
 		*ser, err = ptouchgo.Open(args[0], 0, true)
 
 		if err != nil {
@@ -60,12 +60,13 @@ func openPrinter(ser *ptouchgo.Serial) error {
 			return (err)
 		}
 	}
-	printer.connected = true
+	printer.connected = false
 
 	fmt.Println("reading status")
 	ser.RequestStatus()
 	printer.status, err = ser.ReadStatus()
 	if err != nil {
+		printer.ser.Close()
 		return err
 	}
 
@@ -82,13 +83,8 @@ func openPrinter(ser *ptouchgo.Serial) error {
 	if err != nil {
 		return err
 	}
-	if printer.status.Error1 != 0 {
-		return fmt.Errorf("printer error1 state: %d", printer.status.Error1)
-	}
+	printer.connected = true
 
-	if printer.status.Error2 != 0 {
-		return fmt.Errorf("printer error2 state: %d. Press powerbutton once-", printer.status.Error2)
-	}
 	return nil
 }
 
@@ -261,7 +257,8 @@ func index(c *gin.Context) {
 		fontsize = strconv.Itoa(size)
 	}
 
-	vmargin_px := 0
+	// pretend 12mm tape
+	vmargin_px := int(128 * 12 / 24)
 
 	printer.lock.Lock()
 	defer printer.lock.Unlock()
@@ -269,22 +266,27 @@ func index(c *gin.Context) {
 	err = openPrinter(&printer.ser)
 	if err != nil {
 		status["err"] = err
-		if printer.connected {
-			printer.ser.Close()
-		}
-		printer.connected = false
 	}
-	printer.connected = false
+
+	if printer.status.Error1 != 0 {
+		status["err"] = "Printer Tape error. Cannot print"
+	}
+
+	if printer.status.Error2 != 0 {
+		status["err"] = "Printer error2 state: %d. Press power-button once to reset Software Error"
+	}
+
 	if printer.status != nil && printer.status.Model != 0 {
 		status["connected"] = true
 		if printer.status.TapeWidth != 0 {
 			// margin seems to scale with 128px max tape width
 			vmargin_px = int(128 * printer.status.TapeWidth / 24)
+		} else {
+			status["err"] = "No tape detected. Cannot print"
 		}
 		printer.connected = true
-	} else {
-		// pretend 12mm tape
-		vmargin_px = int(128 * 12 / 24)
+	} else if printer.connected {
+		printer.ser.Close()
 	}
 
 	status["label"] = label
