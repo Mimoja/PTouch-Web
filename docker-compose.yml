@@ -9,3 +9,4 @@ services:
       - /dev/bus/usb
 #    command: /app/ptouch-web /dev/rfcomm0
     command: /app/ptouch-web usb
+    restart: always
