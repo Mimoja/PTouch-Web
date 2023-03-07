@@ -49,14 +49,33 @@
 			</form>
 			<br>
 			<br>
-			<p class="p-1">All available fonts</p>
+			<noscript>
+				<style type="text/css">
+					.fontbutton {display:none;}
+				</style>
+				<div class="noscriptmsg">
+					You don't have javascript enabled. Needed for font selection buttons
+				</div>
+			</noscript>
+			<button class="fontbutton mb-3 btn btn-primary" onclick="const urlParams = new URLSearchParams(window.location.search);
+							if (urlParams.has('no_fonts')) {
+								urlParams.delete('no_fonts');
+							} else {
+								urlParams.set('no_fonts', 'yes');
+							}
+							window.location='.?'+urlParams">
+				Toggle available fonts</button>
 			<ul class="list-group">
 				{{range $val := .fonts}}
 				<li onclick="const urlParams = new URLSearchParams(window.location.search);
-urlParams.set('font', '{{$val}}');
-window.location='.?'+urlParams" class="list-group-item list-group-item-action">{{$val}}<img src="/img/fonts/{{$val}}.png"></li>
+							urlParams.set('font', '{{$val}}');
+							window.location='.?'+urlParams"
+					class="list-group-item list-group-item-action">
+					{{$val}}<img src="/img/fonts/{{$val}}.png">
+				</li>
 				{{end}}
 			</ul>
+			</div>
 		</div>
 	</div>
 </div>

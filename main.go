@@ -88,7 +88,7 @@ func openPrinter(ser *ptouchgo.Serial) error {
 	return nil
 }
 
-func createImage(text string, font_path string, fontsize int, vheight int) (*image.Image, error) {
+func createImage(text string, font_path string, fontsize int, vheight int, transparent bool) (*image.Image, error) {
 	fmt.Printf("creating image h= %d font=%s\n", vheight, font_path)
 	var err error
 	fontdata := goregular.TTF
@@ -122,7 +122,11 @@ func createImage(text string, font_path string, fontsize int, vheight int) (*ima
 	fmt.Printf("width: %f; height: %f;\n", w, h)
 
 	dc = gg.NewContext(int(w+40), vheight)
-	dc.SetRGB(1, 1, 1)
+	if transparent {
+		dc.SetRGBA(0, 0, 0, 0)
+	} else {
+		dc.SetRGB(1, 1, 1)
+	}
 	dc.Clear()
 	dc.SetRGB(0, 0, 0)
 	dc.SetFontFace(face)
@@ -223,6 +227,8 @@ func index(c *gin.Context) {
 
 	label := c.Query("label")
 	font := c.Query("font")
+	_, no_fonts := c.GetQuery("no_fonts")
+
 	count := c.DefaultQuery("count", "1")
 	defaultFontSize := 32
 	if printer.status != nil && printer.status.TapeWidth != 0 {
@@ -305,10 +311,12 @@ func index(c *gin.Context) {
 		fmt.Printf("Found '%s' in '%s'\n", font, fontPath)
 	}
 
-	status["fonts"] = usableFonts
+	if !no_fonts {
+		status["fonts"] = usableFonts
+	}
 	status["font"] = font
 
-	img, err := createImage(label, fontPath, size, vmargin_px)
+	img, err := createImage(label, fontPath, size, vmargin_px, false)
 	if err != nil {
 		status["err"] = err
 	}
@@ -391,6 +399,7 @@ func main() {
 
 	finder := sysfont.NewFinder(nil)
 	for _, systemFont := range finder.List() {
+
 		ext := path.Ext(systemFont.Filename)
 		if systemFont.Name != "" && (ext == ".ttf" || ext == ".otf") {
 			usableFonts = append(usableFonts, systemFont.Name)
@@ -400,7 +409,7 @@ func main() {
 				continue
 			}
 
-			img, err := createImage(systemFont.Name, systemFont.Filename, 20, 24)
+			img, err := createImage(systemFont.Name, systemFont.Filename, 20, 24, true)
 			if err != nil {
 				panic(err)
 			}
