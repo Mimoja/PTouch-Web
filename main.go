@@ -9,16 +9,19 @@ import (
 	"html/template"
 	"image"
 	"image/png"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
 
+	"github.com/flopp/go-findfont"
 	"github.com/fogleman/gg"
 	"github.com/gin-gonic/gin"
 	"github.com/ka2n/ptouchgo"
 	_ "github.com/ka2n/ptouchgo/conn/usb"
+
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/font/opentype"
@@ -31,8 +34,9 @@ func Router(r *gin.Engine) {
 }
 
 type SafePrinter struct {
-	lock sync.Mutex
-	ser  ptouchgo.Serial
+	lock      sync.Mutex
+	ser       ptouchgo.Serial
+	connected bool
 }
 
 var printer SafePrinter
@@ -42,16 +46,15 @@ func openPrinter(ser *ptouchgo.Serial) error {
 	args := flag.Args()
 
 	var err error
-	*ser, err = ptouchgo.Open(args[0], 0, true)
+	if !printer.connected {
+		*ser, err = ptouchgo.Open(args[0], 0, true)
 
-	if err != nil {
-		return (err)
+		if err != nil {
+			println("Failed to open printer:", err.Error())
+			return (err)
+		}
 	}
-
-	err = printer.ser.Reset()
-	if err != nil {
-		return (err)
-	}
+	printer.connected = true
 
 	fmt.Println("reading status")
 	ser.RequestStatus()
@@ -64,15 +67,42 @@ func openPrinter(ser *ptouchgo.Serial) error {
 	enc.SetIndent("", "  ")
 	enc.Encode(printerStatus)
 
+	err = ser.Close()
+	if err != nil {
+		return err
+	}
+
+	*ser, err = ptouchgo.Open(args[0], uint(printerStatus.TapeWidth), true)
+
+	if printerStatus.Error1 != 0 {
+		return fmt.Errorf("Printer error1 state: %d", printerStatus.Error1)
+	}
+
+	if printerStatus.Error2 != 0 {
+		return fmt.Errorf("Printer error2 state: %d. Press powerbutton once-", printerStatus.Error2)
+	}
 	return nil
 }
 
 func createImage(text string, fontsize int, vheight int) image.Image {
 	fmt.Printf("creating image h= %d\n", vheight)
+	fontdata := goregular.TTF
 
-	f, err := opentype.Parse(goregular.TTF)
+	font_name := "ubuntu-r.ttf"
+
+	fontPath, err := findfont.Find(font_name)
+	if err == nil {
+		fmt.Printf("Found '%s' in '%s'\n", font_name, fontPath)
+		fontdata, err = ioutil.ReadFile(fontPath)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// load the font with the freetype library
+	f, err := opentype.Parse(fontdata)
 	if err != nil {
-		panic("")
+		panic(err)
 	}
 
 	face, err := opentype.NewFace(f, &opentype.FaceOptions{
@@ -81,7 +111,7 @@ func createImage(text string, fontsize int, vheight int) image.Image {
 		Hinting: font.HintingNone,
 	})
 	if err != nil {
-		panic("")
+		panic(err)
 	}
 
 	dc := gg.NewContext(100, 100)
@@ -107,6 +137,11 @@ func createImage(text string, fontsize int, vheight int) image.Image {
 }
 
 func printLabel(chain bool, img *image.Image, ser *ptouchgo.Serial) error {
+
+	if printerStatus.TapeWidth == 0 {
+		return fmt.Errorf("Cannot print without tape detected")
+	}
+
 	dc := gg.NewContext((*img).Bounds().Dx(), 128)
 	dc.SetRGB(1, 1, 1)
 	dc.Clear()
@@ -163,11 +198,6 @@ func printLabel(chain bool, img *image.Image, ser *ptouchgo.Serial) error {
 		return err
 	}
 
-	err = ser.Reset()
-	if err != nil {
-		return (err)
-	}
-
 	return nil
 }
 
@@ -187,10 +217,10 @@ func index(c *gin.Context) {
 
 	label := c.Query("label")
 	count := c.DefaultQuery("count", "1")
-	fontsize := c.DefaultQuery("fontsize", "48")
+	fontsize := c.DefaultQuery("fontsize", "32")
 	chain_print := c.Query("chain")
 
-	fmt.Printf("label: %s; count: %s; should_print =%s path=%s\n", label, count, should_print, c.Request.URL.Path)
+	fmt.Printf("label: %s; count: %s; should_print =%b path=%s\n", label, count, should_print, c.Request.URL.Path)
 
 	if fontsize == "" {
 		fontsize = "48"
@@ -216,13 +246,21 @@ func index(c *gin.Context) {
 	err = openPrinter(&printer.ser)
 	if err != nil {
 		status["err"] = err
-	} else if printerStatus.Model != 0 {
+		if printer.connected {
+			printer.ser.Close()
+		}
+		printer.connected = false
+	}
+	printer.connected = false
+	if printerStatus != nil && printerStatus.Model != 0 {
 		status["connected"] = true
 		if printerStatus.TapeWidth != 0 {
 			// margin seems to scale with 128px max tape width
 			vmargin_px = int(128 * printerStatus.TapeWidth / 24)
 		}
+		printer.connected = true
 	}
+
 	status["label"] = label
 
 	img := createImage(label, size, vmargin_px)
