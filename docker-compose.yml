@@ -5,5 +5,7 @@ services:
     ports:
       - 8080:8080
     devices:
-      - /dev/rfcomm0
-    command: /app/ptouch-web /dev/rfcomm0
+#      - /dev/rfcomm0
+      - /dev/bus/usb
+#    command: /app/ptouch-web /dev/rfcomm0
+    command: /app/ptouch-web usb
