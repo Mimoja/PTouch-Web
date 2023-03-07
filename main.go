@@ -93,7 +93,7 @@ func openPrinter(ser *ptouchgo.Serial) error {
 }
 
 func createImage(text string, font_path string, fontsize int, vheight int) (*image.Image, error) {
-	fmt.Printf("creating image h= %d\n", vheight)
+	fmt.Printf("creating image h= %d font=%s\n", vheight, font_path)
 	var err error
 	fontdata := goregular.TTF
 
@@ -294,7 +294,7 @@ func index(c *gin.Context) {
 
 	font = strings.TrimSpace(font)
 	if font != "" {
-		fontPath, err := findfont.Find(font)
+		fontPath, err = findfont.Find(font)
 		if err != nil {
 			foundFont := finder.Match(font)
 			fontPath = foundFont.Filename
