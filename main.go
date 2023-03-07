@@ -274,25 +274,26 @@ func index(c *gin.Context) {
 		status["err"] = err
 	}
 
-	if printer.status.Error1 != 0 {
-		status["err"] = "Printer Tape error. Cannot print"
-	}
-
-	if printer.status.Error2 != 0 {
-		status["err"] = "Printer error2 state: %d. Press power-button once to reset Software Error"
-	}
-
-	if printer.status != nil && printer.status.Model != 0 {
-		status["connected"] = true
-		if printer.status.TapeWidth != 0 {
-			// margin seems to scale with 128px max tape width
-			vmargin_px = int(128 * printer.status.TapeWidth / 24)
-		} else {
-			status["err"] = "No tape detected. Cannot print"
+	if printer.status != nil {
+		if printer.status.Error1 != 0 {
+			status["err"] = "Printer Tape error. Cannot print"
 		}
-		printer.connected = true
-	} else if printer.connected {
-		printer.ser.Close()
+
+		if printer.status.Error2 != 0 {
+			status["err"] = "Printer error2 state: %d. Press power-button once to reset Software Error"
+		}
+		if printer.status.Model != 0 {
+			status["connected"] = true
+			if printer.status.TapeWidth != 0 {
+				// margin seems to scale with 128px max tape width
+				vmargin_px = int(128 * printer.status.TapeWidth / 24)
+			} else {
+				status["err"] = "No tape detected. Cannot print"
+			}
+			printer.connected = true
+		} else if printer.connected {
+			printer.ser.Close()
+		}
 	}
 
 	status["label"] = label
