@@ -6,6 +6,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/adrg/sysfont"
+	"github.com/fogleman/gg"
+	"github.com/gin-gonic/gin"
+	"github.com/ka2n/ptouchgo"
+	_ "github.com/ka2n/ptouchgo/conn/usb"
+	"github.com/mpvl/unique"
 	"html/template"
 	"image"
 	"image/png"
@@ -13,14 +19,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
-
-	"github.com/flopp/go-findfont"
-	"github.com/fogleman/gg"
-	"github.com/gin-gonic/gin"
-	"github.com/ka2n/ptouchgo"
-	_ "github.com/ka2n/ptouchgo/conn/usb"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/goregular"
@@ -30,7 +33,6 @@ import (
 func Router(r *gin.Engine) {
 	r.GET("/", index)
 	r.GET("/print", index)
-
 }
 
 type SafePrinter struct {
@@ -41,6 +43,7 @@ type SafePrinter struct {
 
 var printer SafePrinter
 var printerStatus *ptouchgo.Status
+var usableFonts []string
 
 func openPrinter(ser *ptouchgo.Serial) error {
 	args := flag.Args()
@@ -84,25 +87,22 @@ func openPrinter(ser *ptouchgo.Serial) error {
 	return nil
 }
 
-func createImage(text string, fontsize int, vheight int) image.Image {
+func createImage(text string, font_path string, fontsize int, vheight int) (error, *image.Image) {
 	fmt.Printf("creating image h= %d\n", vheight)
+	var err error
 	fontdata := goregular.TTF
 
-	font_name := "ubuntu-r.ttf"
-
-	fontPath, err := findfont.Find(font_name)
-	if err == nil {
-		fmt.Printf("Found '%s' in '%s'\n", font_name, fontPath)
-		fontdata, err = ioutil.ReadFile(fontPath)
+	if font_path != "" {
+		fontdata, err = ioutil.ReadFile(font_path)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("Could not read font: %v", err), nil
 		}
 	}
 
 	// load the font with the freetype library
 	f, err := opentype.Parse(fontdata)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("Could not parse font: %v", err), nil
 	}
 
 	face, err := opentype.NewFace(f, &opentype.FaceOptions{
@@ -111,7 +111,7 @@ func createImage(text string, fontsize int, vheight int) image.Image {
 		Hinting: font.HintingNone,
 	})
 	if err != nil {
-		panic(err)
+		return err, nil
 	}
 
 	dc := gg.NewContext(100, 100)
@@ -133,10 +133,14 @@ func createImage(text string, fontsize int, vheight int) image.Image {
 	fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
 	// canvas_height/2 + (ascend / 2)
 	dc.DrawStringAnchored(text, (w+40)/2, v_pos, 0.5, 0)
-	return dc.Image()
+	img := dc.Image()
+	return nil, &img
 }
 
 func printLabel(chain bool, img *image.Image, ser *ptouchgo.Serial) error {
+	if printerStatus == nil || printer.connected == false {
+		return fmt.Errorf("Cannot print without printer")
+	}
 
 	if printerStatus.TapeWidth == 0 {
 		return fmt.Errorf("Cannot print without tape detected")
@@ -217,9 +221,10 @@ func index(c *gin.Context) {
 	should_print := c.Request.URL.Path == "/print"
 
 	label := c.Query("label")
+	font := c.Query("font")
 	count := c.DefaultQuery("count", "1")
 	defaultFontSize := 32
-	if printerStatus.TapeWidth != 0 {
+	if printerStatus != nil && printerStatus.TapeWidth != 0 {
 		// margin seems to scale with 128px max tape width
 		if printerStatus.TapeWidth == 9 {
 			defaultFontSize = 32
@@ -251,7 +256,7 @@ func index(c *gin.Context) {
 		fontsize = strconv.Itoa(size)
 	}
 
-	vmargin_px := 32 // default for 12mm label
+	vmargin_px := 0
 
 	printer.lock.Lock()
 	defer printer.lock.Unlock()
@@ -272,11 +277,35 @@ func index(c *gin.Context) {
 			vmargin_px = int(128 * printerStatus.TapeWidth / 24)
 		}
 		printer.connected = true
+	} else {
+		// pretend 12mm tape
+		vmargin_px = int(128 * 12 / 24)
 	}
 
 	status["label"] = label
+	fontPath := ""
 
-	img := createImage(label, size, vmargin_px)
+	finder := sysfont.NewFinder(nil)
+
+	status["fonts"] = usableFonts
+	if strings.TrimSpace(font) != "" {
+		foundFont := finder.Match(font)
+		if foundFont != nil {
+			fontPath = foundFont.Filename
+			font = path.Base(fontPath)
+			fmt.Printf("Found '%s' in '%s'\n", font, fontPath)
+		} else {
+			status["err"] = err
+			fontPath = ""
+		}
+	}
+
+	status["font"] = font
+
+	err, img := createImage(label, fontPath, size, vmargin_px)
+	if err != nil {
+		status["err"] = err
+	}
 
 	if count == "" {
 		count = "1"
@@ -289,7 +318,7 @@ func index(c *gin.Context) {
 
 	if should_print {
 		for i := 1; i <= copies; i++ {
-			err = printLabel(i != copies || chain_print == "checked", &img, &printer.ser)
+			err = printLabel(i != copies || chain_print == "checked", img, &printer.ser)
 			if err != nil {
 				status["err"] = err
 				break
@@ -315,7 +344,7 @@ func index(c *gin.Context) {
 
 	if img != nil {
 		// see issue https://github.com/golang/go/issues/20536 on why using URL type
-		status["image"] = template.URL(to_base64(&img))
+		status["image"] = template.URL(to_base64(img))
 	}
 
 	if printerStatus != nil {
@@ -346,6 +375,16 @@ func main() {
 		fmt.Println("connection is missing.")
 		os.Exit(1)
 	}
+
+	finder := sysfont.NewFinder(nil)
+	for _, systemFont := range finder.List() {
+		ext := path.Ext(systemFont.Filename)
+		if systemFont.Name != "" && (ext == ".ttf" || ext == ".otf") {
+			usableFonts = append(usableFonts, systemFont.Name)
+		}
+	}
+	sort.Strings(usableFonts)
+	unique.Strings(&usableFonts)
 
 	r := gin.New()
 	r.Use(gin.Logger())

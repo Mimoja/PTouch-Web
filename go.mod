@@ -3,16 +3,19 @@ module ptouch-web
 go 1.18
 
 require (
-	github.com/flopp/go-findfont v0.1.0
+	github.com/adrg/sysfont v0.1.2
 	github.com/fogleman/gg v1.3.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/ka2n/ptouchgo v1.0.0
+	github.com/mpvl/unique v0.0.0-20150818121801-cbe035fff7de
 	golang.org/x/image v0.5.0
 )
 
 replace github.com/ka2n/ptouchgo => github.com/Mimoja/ptouchgo v1.0.1-0.20230302000959-251cc7082498
 
 require (
+	github.com/adrg/strutil v0.2.2 // indirect
+	github.com/adrg/xdg v0.3.0 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect

@@ -37,12 +37,27 @@
 						<input class="form-control" type="number" id="fontsize" name="fontsize" value="{{.fontsize}}">
 				</div>
 				<div class="mb-1">
+					<label class="form-label" for="label">Font (optional):</label>
+					<input class="form-control" type="text" id="font" name="font" value="{{.font}}">
+				</div>
+				<div class="mb-1">
 					<label class="form-label" for="chain">Chain:</label>
 					<input class="form-check-input" type="checkbox" id="chain" name="chain" value="checked" {{if .chain}} checked {{end}}>
 				</div>
 				<input type="submit"  class="btn btn-primary" value="Preview">
 				<button type="submit" formaction="/print" class="btn btn-primary">Print</button>
 			</form>
+			<br>
+			<br>
+			<br>
+			<p>All available fonts</p>
+			<ul class="list-group">
+				{{range $val := .fonts}}
+				<li onclick="const urlParams = new URLSearchParams(window.location.search);
+urlParams.set('font', '{{$val}}');
+window.location='.?'+urlParams" class="list-group-item list-group-item-action">{{$val}}</li>
+				{{end}}
+			</ul>
 		</div>
 	</div>
 </div>
