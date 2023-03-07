@@ -6,17 +6,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/adrg/sysfont"
-	"github.com/fogleman/gg"
-	"github.com/gin-gonic/gin"
-	"github.com/ka2n/ptouchgo"
-	_ "github.com/ka2n/ptouchgo/conn/usb"
-	"github.com/mpvl/unique"
 	"html/template"
 	"image"
 	"image/png"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path"
@@ -24,6 +19,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/adrg/sysfont"
+	"github.com/fogleman/gg"
+	"github.com/gin-gonic/gin"
+	"github.com/ka2n/ptouchgo"
+	_ "github.com/ka2n/ptouchgo/conn/usb"
+	"github.com/mpvl/unique"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/goregular"
@@ -128,7 +130,7 @@ func createImage(text string, font_path string, fontsize int, vheight int) (erro
 
 	measure := font.MeasureString(face, text)
 	metrics := face.Metrics()
-	v_pos := float64(dc.Height())/2 + (float64(metrics.CapHeight)/64)/2
+	v_pos := float64(dc.Height())/2 + (math.Abs(float64(metrics.CapHeight))/64)/2
 
 	fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
 	// canvas_height/2 + (ascend / 2)
@@ -138,12 +140,12 @@ func createImage(text string, font_path string, fontsize int, vheight int) (erro
 }
 
 func printLabel(chain bool, img *image.Image, ser *ptouchgo.Serial) error {
-	if printerStatus == nil || printer.connected == false {
-		return fmt.Errorf("Cannot print without printer")
+	if printerStatus == nil || !printer.connected {
+		return fmt.Errorf("cannot print without printer")
 	}
 
 	if printerStatus.TapeWidth == 0 {
-		return fmt.Errorf("Cannot print without tape detected")
+		return fmt.Errorf("cannot print without tape detected")
 	}
 
 	dc := gg.NewContext((*img).Bounds().Dx(), 128)
