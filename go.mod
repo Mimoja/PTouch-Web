@@ -9,6 +9,8 @@ require (
 	golang.org/x/image v0.5.0
 )
 
+replace github.com/ka2n/ptouchgo => github.com/Mimoja/ptouchgo v1.0.1-0.20230302000959-251cc7082498
+
 require (
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
