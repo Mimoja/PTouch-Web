@@ -9,8 +9,9 @@
 			{{if .status}}
 			<table class="table alert-success">
 				<tr><td>MediaType</td><td>{{.status.MediaType}}</td></tr>
-				<tr><td>TapeColor</td><td>{{.status.TapeColor}}</td></tr>
+				<tr><td>TapeColor</td><td>{{.status.TapeColor}}({{.tapeCode}})</td></tr>
 				<tr><td>TapeWidth</td><td>{{.status.TapeWidth}}</td></tr>
+				<tr><td>TapeLength</td><td>{{.status.TapeLength}}</td></tr>
 			</table>
 			{{end}}
 			{{else}}

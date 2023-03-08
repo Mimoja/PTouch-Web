@@ -376,6 +376,7 @@ func index(c *gin.Context) {
 
 	if printer.status != nil {
 		status["status"] = printer.status
+		status["tapeCode"] = fmt.Sprintf("%x(%d)", printer.status.TapeColor, printer.status.TapeColor)
 	}
 
 	c.HTML(
