@@ -70,7 +70,7 @@ func openPrinter(ser *ptouchgo.Serial) error {
 		printer.ser.Close()
 		return err
 	}
-	printer.connected = true
+	printer.connected = printer.status.Model != 0
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
@@ -277,7 +277,6 @@ func index(c *gin.Context) {
 		}
 
 		if printer.status.Model != 0 {
-			status["connected"] = true
 			if printer.status.TapeWidth != 0 {
 				// margin seems to scale with 128px max tape width
 				vmargin_px = int(128 * printer.status.TapeWidth / 24)
@@ -286,6 +285,7 @@ func index(c *gin.Context) {
 			}
 		}
 	}
+	status["connected"] = printer.connected
 
 	status["label"] = label
 	fontPath := ""
