@@ -80,7 +80,6 @@ func openPrinter(ser *ptouchgo.Serial) error {
 }
 
 func createImage(text string, font_path string, fontsize int, vheight int, transparent bool) (*image.Image, error) {
-	fmt.Printf("creating image h= %d font=%s\n", vheight, font_path)
 	var err error
 	fontdata := goregular.TTF
 
@@ -90,6 +89,12 @@ func createImage(text string, font_path string, fontsize int, vheight int, trans
 			return nil, fmt.Errorf("could not read font: %v", err)
 		}
 	}
+
+	text = strings.TrimSpace(text)
+	text_lines := strings.Split(text, "\n")
+	fontsize = fontsize / (len(text_lines))
+
+	fmt.Printf("creating image h= %d font=%s font_size=%d lines=%d text=%s\n", vheight, font_path, fontsize, len(text_lines), text)
 
 	// load the font with the freetype library
 	f, err := opentype.Parse(fontdata)
@@ -109,11 +114,19 @@ func createImage(text string, font_path string, fontsize int, vheight int, trans
 
 	dc := gg.NewContext(100, 100)
 	dc.SetFontFace(face)
+	max_w := 0.0
+	trimmed_lines := []string{}
+	for _, text := range text_lines {
+		text = strings.TrimSpace(text)
+		trimmed_lines = append(trimmed_lines, text)
+		w, _ := dc.MeasureString(text)
+		if w > max_w {
+			max_w = w
+		}
+	}
+	text_lines = trimmed_lines
 
-	w, h := dc.MeasureString(text)
-	fmt.Printf("width: %f; height: %f;\n", w, h)
-
-	dc = gg.NewContext(int(w+40), vheight)
+	dc = gg.NewContext(int(max_w+40), vheight)
 	if transparent {
 		dc.SetRGBA(0, 0, 0, 0)
 	} else {
@@ -125,11 +138,17 @@ func createImage(text string, font_path string, fontsize int, vheight int, trans
 
 	measure := font.MeasureString(face, text)
 	metrics := face.Metrics()
-	v_pos := float64(dc.Height())/2 + (math.Abs(float64(metrics.CapHeight))/64)/2
+	for i, text := range text_lines {
+		segment_start := float64((dc.Height() / len(text_lines)) * (i))
+		segment_end := float64((dc.Height() / len(text_lines)) * (i + 1))
+		segment_mid := (segment_start + segment_end) / 2
+		fmt.Printf("Line %d segment mid %f out of %d\n", i, segment_mid, dc.Height())
+		v_pos := segment_mid + (math.Abs(float64(metrics.CapHeight))/64)/2
 
-	fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
-	// canvas_height/2 + (ascend / 2)
-	dc.DrawStringAnchored(text, (w+40)/2, v_pos, 0.5, 0)
+		fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
+		// canvas_height/2 + (ascend / 2)
+		dc.DrawStringAnchored(text, (max_w+40)/2, v_pos, 0.5, 0)
+	}
 	img := dc.Image()
 	return &img, nil
 }

@@ -26,14 +26,14 @@
 			<form class="" action="/" method="get">
 				<div class="mb-1">
 					<label class="form-label" for="label">Label:</label>
-					<input class="form-control" type="text" id="label" name="label" value="{{.label}}">
+					<textarea class="form-control" id="label" name="label" rows="3">{{.label}}</textarea>
 				</div>
 				<div class="mb-1">
 					<label class="form-label" for="count">Copies:</label>
 					<input class="form-control" type="number" id="count" name="count" value="{{.count}}">
 				</div>
 				<div class="mb-1">
-						<label class="form-label" for="fontsize">Fontsize:</label>
+						<label class="form-label" for="fontsize">Fontsize (divided by total lines):</label>
 						<input class="form-control" type="number" id="fontsize" name="fontsize" value="{{.fontsize}}">
 				</div>
 				<div class="mb-1">
