@@ -13,6 +13,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	url2 "net/url"
 	"os"
 	"path"
 	"sort"
@@ -355,7 +356,7 @@ func index(c *gin.Context) {
 		url := "/?"
 		paramPairs := c.Request.URL.Query()
 		for key, values := range paramPairs {
-			url += key + "=" + values[0] + "&"
+			url += key + "=" + url2.QueryEscape(values[0]) + "&"
 		}
 		c.Redirect(http.StatusFound, url)
 		return
