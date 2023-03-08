@@ -57,24 +57,24 @@ func openPrinter(ser *ptouchgo.Serial) error {
 
 		if err != nil {
 			println("Failed to open printer:", err.Error())
+			printer.connected = false
 			return (err)
 		}
 	}
-	printer.connected = false
 
 	fmt.Println("reading status")
 	ser.RequestStatus()
 	printer.status, err = ser.ReadStatus()
 	if err != nil {
+		printer.connected = false
 		printer.ser.Close()
 		return err
 	}
+	printer.connected = true
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	enc.Encode(printer.status)
-
-	printer.connected = true
 
 	return nil
 }
@@ -275,6 +275,7 @@ func index(c *gin.Context) {
 		if printer.status.Error2 != 0 {
 			status["err"] = "Printer error2 state: %d. Press power-button once to reset Software Error"
 		}
+
 		if printer.status.Model != 0 {
 			status["connected"] = true
 			if printer.status.TapeWidth != 0 {
@@ -283,9 +284,6 @@ func index(c *gin.Context) {
 			} else {
 				status["err"] = "No tape detected. Cannot print"
 			}
-			printer.connected = true
-		} else if printer.connected {
-			printer.ser.Close()
 		}
 	}
 
