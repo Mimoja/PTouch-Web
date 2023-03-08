@@ -74,15 +74,6 @@ func openPrinter(ser *ptouchgo.Serial) error {
 	enc.SetIndent("", "  ")
 	enc.Encode(printer.status)
 
-	err = ser.Close()
-	if err != nil {
-		return err
-	}
-
-	*ser, err = ptouchgo.Open(args[0], uint(printer.status.TapeWidth), true)
-	if err != nil {
-		return err
-	}
 	printer.connected = true
 
 	return nil
@@ -151,6 +142,7 @@ func printLabel(chain bool, img *image.Image, ser *ptouchgo.Serial) error {
 	if printer.status.TapeWidth == 0 {
 		return fmt.Errorf("cannot print without tape detected")
 	}
+	ser.TapeWidthMM = uint(printer.status.TapeWidth)
 
 	dc := gg.NewContext((*img).Bounds().Dx(), 128)
 	dc.SetRGB(1, 1, 1)
