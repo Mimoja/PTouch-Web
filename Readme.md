@@ -1,7 +1,7 @@
 # PTouch-Web
 A web interface to your PTouch printer
 
-![Screenshot](screenshot.png)
+![Screenshot Multiline](https://user-images.githubusercontent.com/10907336/224796519-85a35ce7-be0c-41db-9288-47eabf4d665d.png)
 
 - PTouch-Web uses the system fonts to render the shown image.
 - The webinterface works without Javascript, however the font selection uses
