@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"image"
 	"image/png"
-	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
@@ -31,7 +30,6 @@ import (
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/gofont/goregular"
-	"golang.org/x/image/font/opentype"
 )
 
 func Router(r *gin.Engine) {
@@ -48,6 +46,8 @@ type SafePrinter struct {
 
 var printer SafePrinter
 var usableFonts []string
+
+var emojiFont font.Face
 
 func openPrinter(ser *ptouchgo.Serial) error {
 	args := flag.Args()
@@ -82,14 +82,7 @@ func openPrinter(ser *ptouchgo.Serial) error {
 
 func createImage(text string, font_path string, fontsize int, vheight int, transparent bool) (*image.Image, error) {
 	var err error
-	fontdata := goregular.TTF
-
-	if font_path != "" {
-		fontdata, err = ioutil.ReadFile(font_path)
-		if err != nil {
-			return nil, fmt.Errorf("could not read font: %v", err)
-		}
-	}
+	var face font.Face
 
 	text = strings.TrimSpace(text)
 	text_lines := strings.Split(text, "\n")
@@ -97,37 +90,36 @@ func createImage(text string, font_path string, fontsize int, vheight int, trans
 
 	fmt.Printf("creating image h= %d font=%s font_size=%d lines=%d text=%s\n", vheight, font_path, fontsize, len(text_lines), text)
 
-	// load the font with the freetype library
-	f, err := opentype.Parse(fontdata)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse font: %v", err)
+	if font_path != "" {
+		face, err = OpenFaceFromPath(font_path, fontsize)
+	} else {
+		face, err = OpenFaceFromData(goregular.TTF, fontsize)
 	}
 
-	face, err := opentype.NewFace(f, &opentype.FaceOptions{
-		Size:    float64(fontsize),
-		DPI:     72, // 72 is default value, as such fontsize 1:1 rendered pixels
-		Hinting: font.HintingNone,
-	})
 	if err != nil {
 		return nil, err
 	}
 	defer face.Close()
+	emojif, err := OpenFaceFromPath("./static/notoemoji-var_weight.ttf", fontsize)
+	defer emojif.Close()
 
-	dc := gg.NewContext(100, 100)
-	dc.SetFontFace(face)
+	availableFaces := [2]font.Face{emojif, face}
+
 	max_w := 0.0
-	trimmed_lines := []string{}
+	var trimmed_lines [][]Input
 	for _, text := range text_lines {
 		text = strings.TrimSpace(text)
-		trimmed_lines = append(trimmed_lines, text)
-		w, _ := dc.MeasureString(text)
+		in := SplitByFontGlyphs(text, availableFaces[:])
+		fmt.Printf("input: %v", in)
+		trimmed_lines = append(trimmed_lines, in)
+
+		w := MeasureStringFromSplitInput(in)
 		if w > max_w {
 			max_w = w
 		}
 	}
-	text_lines = trimmed_lines
 
-	dc = gg.NewContext(int(max_w+40), vheight)
+	dc := gg.NewContext(int(max_w+40), vheight)
 	if transparent {
 		dc.SetRGBA(0, 0, 0, 0)
 	} else {
@@ -139,16 +131,29 @@ func createImage(text string, font_path string, fontsize int, vheight int, trans
 
 	measure := font.MeasureString(face, text)
 	metrics := face.Metrics()
-	for i, text := range text_lines {
-		segment_start := float64((dc.Height() / len(text_lines)) * (i))
-		segment_end := float64((dc.Height() / len(text_lines)) * (i + 1))
+	for i, inputs := range trimmed_lines {
+
+		segment_start := float64((dc.Height() / len(trimmed_lines)) * (i))
+		segment_end := float64((dc.Height() / len(trimmed_lines)) * (i + 1))
 		segment_mid := (segment_start + segment_end) / 2
 		fmt.Printf("Line %d segment mid %f out of %d\n", i, segment_mid, dc.Height())
 		v_pos := segment_mid + (math.Abs(float64(metrics.CapHeight))/64)/2
 
 		fmt.Printf("v_pos %f / advance %f / font metric: %#v\n", v_pos, float64(measure), metrics)
 		// canvas_height/2 + (ascend / 2)
-		dc.DrawStringAnchored(text, (max_w+40)/2, v_pos, 0.5, 0)
+
+		// iterate over different text/face pairs and render them
+		h_width := MeasureStringFromSplitInput(inputs)
+		x := (max_w+40)/2 - h_width/2
+		for _, input := range inputs {
+			// set font
+			dc.SetFontFace(input.Face)
+
+			// render text
+			advance := font.MeasureString(input.Face, input.Text)
+			dc.DrawString(input.Text, x, v_pos)
+			x += float64(advance) / 64
+		}
 	}
 	img := dc.Image()
 	return &img, nil
