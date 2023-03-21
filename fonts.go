@@ -47,19 +47,18 @@ func SplitByFontGlyphs(input string, availableFaces []font.Face) []Input {
 
 	for i, r := range []rune(input) {
 		selectedFace := findFontByGlyph(r, availableFaces)
-
 		if currentText.Face == selectedFace {
 			continue
 		}
 
 		// new face is needed
 		if i != 0 {
-			currentText.Text = currentText.Text[0 : i-offset]
+			currentText.Text = string([]rune(currentText.Text)[0 : i-offset])
 			splitTexts = append(splitTexts, currentText)
 		}
 
 		// create new currentText
-		currentText = Input{Text: input[i:], Face: selectedFace}
+		currentText = Input{Text: string([]rune(input)[i:]), Face: selectedFace}
 		offset = i
 	}
 
