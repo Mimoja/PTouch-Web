@@ -135,7 +135,7 @@ func listRecent() ([]printConfig, error) {
 		target = append(target, recent)
 	}
 	sort.Slice(target, func(i, j int) bool {
-		return target[i].Last.Before(target[j].Last)
+		return target[i].Last.After(target[j].Last)
 	})
 	return target, nil
 }
