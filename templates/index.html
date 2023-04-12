@@ -53,7 +53,7 @@
 			<ul class="list-group">
 				{{range $val := .recents}}
 				<a href="/?label={{$val.Label}}&fontsize={{$val.Size}}&font={{$val.Font}}" class="list-group-item list-group-item-action">
-					{{$val.Label}}  <br> Size: {{$val.Size}} Font: {{$val.Font}}
+					<img src='{{$val.ImageData}}' class="border"/>  <br> Size: {{$val.Size}} Font: {{$val.Font}}
 				</a>
 				{{end}}
 			</ul>

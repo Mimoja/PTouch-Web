@@ -50,10 +50,11 @@ type SafePrinter struct {
 }
 
 type printConfig struct {
-	Label string
-	Font  string
-	Last  time.Time
-	Size  int
+	Label     string
+	Font      string
+	Last      time.Time
+	Size      int
+	ImageData template.URL
 }
 
 var printer SafePrinter
@@ -121,6 +122,16 @@ func listRecent() ([]printConfig, error) {
 			println("Recents err", err)
 			return target, err
 		}
+
+		_, fontPath := fontSelect(recent.Font)
+
+		img, err := createImage(recent.Label, fontPath, recent.Size, int(128*9/24), false)
+		if err != nil {
+			println("Error creating recents image: ", err.Error())
+		} else if img != nil {
+			recent.ImageData = template.URL(to_base64(img))
+		}
+
 		target = append(target, recent)
 	}
 	sort.Slice(target, func(i, j int) bool {
@@ -365,20 +376,7 @@ func index(c *gin.Context) {
 
 	status["label"] = label
 	fontPath := ""
-
-	finder := sysfont.NewFinder(nil)
-
-	font = strings.TrimSpace(font)
-	if font != "" {
-		fontPath, err = findfont.Find(font)
-		if err != nil {
-			fmt.Printf("Falling back to fontmatch")
-			foundFont := finder.Match(font)
-			fontPath = foundFont.Filename
-		}
-		fmt.Printf("Found '%s' in '%s'\n", font, fontPath)
-		font = path.Base(fontPath)
-	}
+	font, fontPath = fontSelect(font)
 
 	if !no_fonts {
 		status["fonts"] = usableFonts
@@ -446,7 +444,7 @@ func index(c *gin.Context) {
 		println("listRecent failed: ", err)
 		status["err"] = err
 	}
-	fmt.Printf("Recents: %v\n", recent)
+
 	status["recents"] = recent
 
 	c.HTML(
@@ -454,6 +452,24 @@ func index(c *gin.Context) {
 		"index",
 		status,
 	)
+}
+
+func fontSelect(font string) (string, string) {
+	finder := sysfont.NewFinder(nil)
+	font = strings.TrimSpace(font)
+	fontPath := ""
+	var err error
+	if font != "" {
+		fontPath, err = findfont.Find(font)
+		if err != nil {
+			fmt.Printf("Falling back to fontmatch")
+			foundFont := finder.Match(font)
+			fontPath = foundFont.Filename
+		}
+		fmt.Printf("Found '%s' in '%s'\n", font, fontPath)
+		font = path.Base(fontPath)
+	}
+	return font, fontPath
 }
 
 func usage() {
