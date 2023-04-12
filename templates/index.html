@@ -49,6 +49,14 @@
 				<button type="submit" formaction="/print" class="btn btn-primary">Print</button>
 			</form>
 			<br>
+			<p>Recents:</p>
+			<ul class="list-group">
+				{{range $val := .recents}}
+				<a href="/?label={{$val.Label}}&fontsize={{$val.Size}}&font={{$val.Font}}" class="list-group-item list-group-item-action">
+					{{$val.Label}}  <br> Size: {{$val.Size}} Font: {{$val.Font}}
+				</a>
+				{{end}}
+			</ul>
 			<br>
 			<noscript>
 				<style type="text/css">
@@ -68,12 +76,9 @@
 				Toggle available fonts</button>
 			<ul class="list-group">
 				{{range $val := .fonts}}
-				<li onclick="const urlParams = new URLSearchParams(window.location.search);
-							urlParams.set('font', '{{$val}}');
-							window.location='.?'+urlParams"
-					class="list-group-item list-group-item-action">
+				<a href="/?label={{$.label}}&fontsize={{$.fontsize}}&font={{$val}}&count={{$.count}}&chain={{$.chain}}" class="list-group-item list-group-item-action">
 					{{$val}}<img src="/img/fonts/{{$val}}.png">
-				</li>
+				</a>
 				{{end}}
 			</ul>
 			</div>

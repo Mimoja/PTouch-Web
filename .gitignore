@@ -18,3 +18,5 @@ static/img/out.png
 static/img/fonts/*.png
 .idea
 .vscode
+
+recents.db

@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	_ "github.com/mattn/go-sqlite3"
 	"html/template"
 	"image"
 	"image/png"
@@ -19,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/adrg/sysfont"
 	"github.com/flopp/go-findfont"
@@ -37,6 +40,8 @@ func Router(r *gin.Engine) {
 	r.GET("/print", index)
 }
 
+const databaseFile string = "recents.db"
+
 type SafePrinter struct {
 	lock      sync.Mutex
 	ser       ptouchgo.Serial
@@ -44,7 +49,15 @@ type SafePrinter struct {
 	connected bool
 }
 
+type printConfig struct {
+	Label string
+	Font  string
+	Last  time.Time
+	Size  int
+}
+
 var printer SafePrinter
+var db *sql.DB
 var usableFonts []string
 
 var emojiFont font.Face
@@ -78,6 +91,42 @@ func openPrinter(ser *ptouchgo.Serial) error {
 	enc.Encode(printer.status)
 
 	return nil
+}
+
+func insertRecent(label string, font string, size int) error {
+	id := label + ":" + font + ":" + strconv.Itoa(size)
+	res, err := db.Exec("INSERT or REPLACE INTO recent VALUES(?,?,?,?,?);", id, time.Now(), label, font, size)
+	if err != nil {
+		return err
+	}
+
+	if _, err := res.LastInsertId(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func listRecent() ([]printConfig, error) {
+	var target []printConfig
+
+	rows, err := db.Query("SELECT id, label, font, time, size from recent LIMIT 30")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var recent printConfig
+		var id string
+		if err := rows.Scan(&id, &recent.Label, &recent.Font, &recent.Last, &recent.Size); err != nil {
+			println("Recents err", err)
+			return target, err
+		}
+		target = append(target, recent)
+	}
+	sort.Slice(target, func(i, j int) bool {
+		return target[i].Last.Before(target[j].Last)
+	})
+	return target, nil
 }
 
 func createImage(text string, font_path string, fontsize int, vheight int, transparent bool) (*image.Image, error) {
@@ -351,6 +400,12 @@ func index(c *gin.Context) {
 	}
 
 	if should_print {
+		err = insertRecent(label, font, size)
+		if err != nil {
+			println("Insert failed: ", err)
+			status["err"] = err
+		}
+
 		for i := 1; i <= copies; i++ {
 			err = printLabel(i != copies || chain_print == "checked", img, &printer.ser)
 			if err != nil {
@@ -386,6 +441,14 @@ func index(c *gin.Context) {
 		status["tapeCode"] = fmt.Sprintf("%x(%d)", printer.status.TapeColor, printer.status.TapeColor)
 	}
 
+	recent, err := listRecent()
+	if err != nil {
+		println("listRecent failed: ", err)
+		status["err"] = err
+	}
+	fmt.Printf("Recents: %v\n", recent)
+	status["recents"] = recent
+
 	c.HTML(
 		http.StatusOK,
 		"index",
@@ -412,12 +475,36 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	var err error
+
 	args := flag.Args()
 	if len(args) < 1 {
 		fmt.Println("connection is missing.")
 		os.Exit(1)
 	}
 
+	if !fileExists(databaseFile) {
+		os.Create(databaseFile)
+	}
+	db, err = sql.Open("sqlite3", databaseFile)
+	defer db.Close()
+
+	const create string = `
+	  CREATE TABLE IF NOT EXISTS recent (
+			id TEXT NOT NULL PRIMARY KEY,
+			time DATETIME NOT NULL,
+			label TEXT,
+			font TEXT,
+			size INTEGER
+		);
+	`
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err := db.Exec(create); err != nil {
+		panic(err)
+	}
 	finder := sysfont.NewFinder(nil)
 	for _, systemFont := range finder.List() {
 
