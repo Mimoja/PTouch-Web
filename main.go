@@ -209,7 +209,7 @@ func printLabel(chain bool, img *image.Image, ser *ptouchgo.Serial) error {
 		return (err)
 	}
 
-	highDPI := true
+	highDPI := false
 	err = ser.SetExtendedMode(false, !chain, false, highDPI, false)
 	if err != nil {
 		return (err)
