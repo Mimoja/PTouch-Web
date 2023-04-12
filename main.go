@@ -358,9 +358,14 @@ func index(c *gin.Context) {
 		}
 
 		if printer.status.Error2 != 0 {
-			status["err"] = fmt.Sprintf("Printer error2 state: %d. "+
-				"Press power-button once to reset Software Error if reload does not help",
-				printer.status.Error2)
+
+			if printer.status.Error2 == 4 {
+				status["err"] = "Printer is still busy, please reload after print has finished"
+			} else {
+				status["err"] = fmt.Sprintf("Printer error2 state: %d. "+
+					"Press power-button once to reset Software Error if reload does not help",
+					printer.status.Error2)
+			}
 		}
 
 		if printer.status.Model != 0 {
