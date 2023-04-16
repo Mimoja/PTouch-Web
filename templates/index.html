@@ -1,89 +1,120 @@
 {{define "index"}}
 {{template "header" .}}
 <div class="content">
-	<div class="container">
-		<div class="col-md-12 mb-4">
-			<h2>PTouch Web</h2>
-			{{if .connected}}
-			<p class="alert alert-success">Printer is connected!</p>
-			{{if .status}}
-			<table class="table alert-success">
-				<tr><td>MediaType</td><td>{{.status.MediaType}}</td></tr>
-				<tr><td>TapeColor</td><td>{{.status.TapeColor}}({{.tapeCode}})</td></tr>
-				<tr><td>TapeWidth</td><td>{{.status.TapeWidth}}</td></tr>
-				<tr><td>TapeLength</td><td>{{.status.TapeLength}}</td></tr>
-			</table>
-			{{end}}
-			{{else}}
-				<p class="alert alert-warning">Printer did not connect! Tape width set to 12mm</p>
-			{{end}}
-			<p>Suggested sizes:</p>
-			<p>Ubuntu-L.ttf for 12mm labels in size 48</p>
-			<p>Ubuntu-R.ttf for 9mm labels in size 32</p>
-			{{if .err}}
-				<p class="alert alert-warning" role="alert">{{.err}}</p>
-			{{end}}
-			<img src='{{.image}}' class="border"/> <br><br>
-			<form class="" action="/" method="get">
-				<div class="mb-1">
-					<label class="form-label" for="label">Label:</label>
-					<textarea class="form-control" id="label" name="label" rows="3">{{.label}}</textarea>
-				</div>
-				<div class="mb-1">
-					<label class="form-label" for="count">Copies:</label>
-					<input class="form-control" type="number" id="count" name="count" value="{{.count}}">
-				</div>
-				<div class="mb-1">
-						<label class="form-label" for="fontsize">Fontsize (divided by total lines):</label>
-						<input class="form-control" type="number" id="fontsize" name="fontsize" value="{{.fontsize}}">
-				</div>
-				<div class="mb-1">
-					<label class="form-label" for="label">Font (optional):</label>
-					<input class="form-control" type="text" id="font" name="font" value="{{.font}}">
-				</div>
-				<div class="mb-1">
-					<label class="form-label" for="chain">Chain:</label>
-					<input class="form-check-input" type="checkbox" id="chain" name="chain" value="checked" {{if .chain}} checked {{end}}>
-				</div>
-				<input type="submit"  class="btn btn-primary" value="Preview">
-				<button type="submit" formaction="/print" class="btn btn-primary">Print</button>
-			</form>
-			<br>
-			<p>Recents:</p>
-			<ul class="list-group">
-				{{range $val := .recents}}
-				<a href="/?label={{$val.Label}}&fontsize={{$val.Size}}&font={{$val.Font}}" class="list-group-item list-group-item-action">
-					<img src='{{$val.ImageData}}' class="border"/>  <br> Size: {{$val.Size}} Font: {{$val.Font}}
-				</a>
-				{{end}}
-			</ul>
-			<br>
-			<noscript>
-				<style type="text/css">
-					.fontbutton {display:none;}
-				</style>
-				<div class="noscriptmsg">
-					You don't have javascript enabled. Needed for font selection buttons
-				</div>
-			</noscript>
-			<button class="fontbutton mb-3 btn btn-primary" onclick="const urlParams = new URLSearchParams(window.location.search);
+    <div class="container">
+        <div class="col-md-12 mb-4">
+            <h2>PTouch Web</h2>
+            <div class="container">
+                <div class="row">
+                    <div class="col">
+
+                        {{if .connected}}
+                        <p class="alert alert-success">Printer is connected!</p>
+                        {{if .status}}
+                        <table class="table alert-success">
+                            <tr>
+                                <td>MediaType</td>
+                                <td>{{.status.MediaType}}</td>
+                            </tr>
+                            <tr>
+                                <td>TapeColor</td>
+                                <td>{{.status.TapeColor}}({{.tapeCode}})</td>
+                            </tr>
+                            <tr>
+                                <td>TapeWidth</td>
+                                <td>{{.status.TapeWidth}}</td>
+                            </tr>
+                            <tr>
+                                <td>TapeLength</td>
+                                <td>{{.status.TapeLength}}</td>
+                            </tr>
+                        </table>
+                        {{end}}
+                        {{else}}
+                        <p class="alert alert-warning">Printer did not connect! Tape width set to 12mm</p>
+                        {{end}}
+                        <p>Suggested sizes:</p>
+                        <p>Ubuntu-L.ttf for 12mm labels in size 48</p>
+                        <p>Ubuntu-R.ttf for 9mm labels in size 32</p>
+                        {{if .err}}
+                        <p class="alert alert-warning" role="alert">{{.err}}</p>
+                        {{end}}
+                        <img src='{{.image}}' class="border"/> <br><br>
+                        <form class="" action="/" method="get">
+                            <div class="mb-1">
+                                <label class="form-label" for="label">Label:</label>
+                                <textarea class="form-control" id="label" name="label" rows="3">{{.label}}</textarea>
+                            </div>
+                            <div class="mb-1">
+                                <label class="form-label" for="count">Copies:</label>
+                                <input class="form-control" type="number" id="count" name="count" value="{{.count}}">
+                            </div>
+                            <div class="mb-1">
+                                <label class="form-label" for="fontsize">Fontsize (divided by total lines):</label>
+                                <input class="form-control" type="number" id="fontsize" name="fontsize"
+                                       value="{{.fontsize}}">
+                            </div>
+                            <div class="mb-1">
+                                <label class="form-label" for="label">Font (optional):</label>
+                                <input class="form-control" type="text" id="font" name="font" value="{{.font}}">
+                            </div>
+                            <div class="mb-1">
+                                <label class="form-label" for="chain">Chain:</label>
+                                <input class="form-check-input" type="checkbox" id="chain" name="chain" value="checked"
+                                       {{if .chain}} checked {{end}}>
+                            </div>
+                            <input type="submit" class="btn btn-primary" value="Preview">
+                            <button type="submit" formaction="/print" class="btn btn-primary">Print</button>
+                        </form>
+                        <br>
+                    </div>
+                    <div class="col">
+                        <p>Recents:</p>
+                        <ul class="list-group">
+                            {{range $val := .recents}}
+                            <a href="/?label={{$val.Label}}&fontsize={{$val.Size}}&font={{$val.Font}}"
+                               class="list-group-item list-group-item-action">
+                                <img src='{{$val.ImageData}}' class="border"/> <br> Size: {{$val.Size}} Font:
+                                {{$val.Font}}
+                            </a>
+                            {{end}}
+                        </ul>
+                        <br>
+                    </div>
+                </div>
+                <div class="row">
+                    <noscript>
+                        <style type="text/css">
+                            .fontbutton {
+                                display: none;
+                            }
+                        </style>
+                        <div class="noscriptmsg">
+                            You don't have javascript enabled. Needed for font selection buttons
+                        </div>
+                    </noscript>
+                    <button class="fontbutton mb-3 btn btn-primary" onclick="const urlParams = new URLSearchParams(window.location.search);
 							if (urlParams.has('no_fonts')) {
 								urlParams.delete('no_fonts');
 							} else {
 								urlParams.set('no_fonts', 'yes');
 							}
 							window.location='.?'+urlParams">
-				Toggle available fonts</button>
-			<ul class="list-group">
-				{{range $val := .fonts}}
-				<a href="/?label={{$.label}}&fontsize={{$.fontsize}}&font={{$val}}&count={{$.count}}&chain={{$.chain}}" class="list-group-item list-group-item-action">
-					{{$val}}<img src="/img/fonts/{{$val}}.png">
-				</a>
-				{{end}}
-			</ul>
-			</div>
-		</div>
-	</div>
+                        Toggle available fonts
+                    </button>
+                    <ul class="list-group">
+                        {{range $val := .fonts}}
+                        <a href="/?label={{$.label}}&fontsize={{$.fontsize}}&font={{$val}}&count={{$.count}}&chain={{$.chain}}"
+                           class="list-group-item list-group-item-action">
+                            {{$val}}<img src="/img/fonts/{{$val}}.png">
+                        </a>
+                        {{end}}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 {{template "footer" .}}
 {{end}}
