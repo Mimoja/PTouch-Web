@@ -431,7 +431,7 @@ func index(c *gin.Context) {
 	status["fontsize"] = fontsize
 
 	if chain_print == "checked" {
-		status["chain"] = should_print
+		status["chain"] = true
 	}
 
 	if img != nil {
