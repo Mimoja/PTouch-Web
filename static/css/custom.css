@@ -11,3 +11,7 @@
 .clamp-3 {
   -webkit-line-clamp: 3;
 }
+
+.recentsImage {
+  max-width: 600px;
+}

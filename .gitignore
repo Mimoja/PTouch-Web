@@ -16,6 +16,7 @@
 ptouch-web
 static/img/out.png
 static/img/fonts/*.png
+static/img/recents/*.png
 .idea
 .vscode
 

@@ -1,6 +1,6 @@
 module ptouch-web
 
-go 1.18
+go 1.21
 
 require (
 	github.com/adrg/sysfont v0.1.2

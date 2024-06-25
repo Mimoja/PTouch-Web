@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"html/template"
 	"image"
 	"image/png"
@@ -22,6 +23,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/adrg/sysfont"
 	"github.com/flopp/go-findfont"
@@ -123,14 +128,37 @@ func listRecent() ([]printConfig, error) {
 			return target, err
 		}
 
-		_, fontPath := fontSelect(recent.Font)
+		h := sha256.New()
+		h.Write([]byte(id))
+		hashedID := h.Sum(nil)
+		var urlPath = "/img/recents/render_id_" + base64.URLEncoding.EncodeToString(hashedID) + ".png"
+		var filePath = "static" + urlPath
+		if _, err := os.Stat(filePath); errors.Is(err, os.ErrNotExist) {
+			log.Println("recents:  Image needs to be created for", id)
+			_, fontPath := fontSelect(recent.Font)
+			img, err := createImage(recent.Label, fontPath, recent.Size, int(128*9/24), false)
+			if err != nil {
+				println("Error creating recents image: ", err.Error())
+			} else if img != nil {
+				outFile, err := os.Create(filePath)
+				if err != nil {
+					println("Error open recents image file: ", err.Error())
+					continue
+				}
 
-		img, err := createImage(recent.Label, fontPath, recent.Size, int(128*9/24), false)
-		if err != nil {
-			println("Error creating recents image: ", err.Error())
-		} else if img != nil {
-			recent.ImageData = template.URL(to_base64(img))
+				// Encode the image to the file in PNG format with default options
+				err = png.Encode(outFile, *img)
+				if err != nil {
+					println("Error writing recents image to file: ", err.Error())
+					continue
+				}
+				outFile.Close()
+				log.Println("Successfully wrote", filePath, "to disk")
+			}
+		} else {
+			log.Println("recents: Image already exists for", id[:min(len(id), 30)])
 		}
+		recent.ImageData = template.URL(urlPath)
 
 		target = append(target, recent)
 	}

@@ -74,7 +74,7 @@
                             {{range $val := .recents}}
                             <a href="/?label={{$val.Label}}&fontsize={{$val.Size}}&font={{$val.Font}}"
                                class="list-group-item list-group-item-action">
-                                <img src='{{$val.ImageData}}' class="border"/> <br> Size: {{$val.Size}} Font:
+                                <img src='{{$val.ImageData}}' class="border recentsImage"/> <br> Size: {{$val.Size}} Font:
                                 {{$val.Font}}
                             </a>
                             {{end}}
