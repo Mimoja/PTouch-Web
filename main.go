@@ -583,6 +583,18 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	r.Use(func(c *gin.Context) {
+		// Apply the Cache-Control header to the static files
+		fmt.Println(c.Request.URL.Path)
+		if strings.HasPrefix(c.Request.URL.Path, "/img/recents/") {
+			c.Header("Cache-Control", "private, max-age=86400")
+		}
+		if strings.HasPrefix(c.Request.URL.Path, "/img/fonts/") {
+			c.Header("Cache-Control", "private, max-age=86400")
+		}
+		// Continue to the next middleware or handler
+		c.Next()
+	})
 
 	r.Static("/css", "./static/css")
 	r.Static("/js", "./static/js")
