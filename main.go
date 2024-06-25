@@ -26,8 +26,6 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/adrg/sysfont"
 	"github.com/flopp/go-findfont"
 	"github.com/fogleman/gg"
