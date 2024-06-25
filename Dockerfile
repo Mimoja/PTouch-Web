@@ -1,4 +1,4 @@
-FROM golang:1.20.1-alpine
+FROM golang:1.22-alpine
 MAINTAINER Mimoja <git@mimoja.de>, Tyalie <git@flowerpot.me>
 
 RUN  apk add --no-cache build-base pkgconfig libusb libusb-dev
