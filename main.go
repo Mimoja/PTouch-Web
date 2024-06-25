@@ -45,7 +45,7 @@ func Router(r *gin.Engine) {
 	r.GET("/print", index)
 }
 
-const databaseFile string = "recents.db"
+const databaseFile string = "recents/recents.db"
 
 type SafePrinter struct {
 	lock      sync.Mutex
