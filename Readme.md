@@ -33,7 +33,6 @@ sudo apt install ttf-ubuntu-font-family ttf-mscorefonts-installer fonts-freefont
 
 You can create a overwrite `docker-compose.prod.yml` to map custom fonts or device:
 ```docker-compose
-version: "3.3"
 services:
   ptouch-web:
     volumes:
