@@ -8,6 +8,7 @@ services:
       - /dev/bus/usb
     volumes:
       - ./recents/:/app/recents
+      - ./static/:/app/static
 #    command: /app/ptouch-web /dev/rfcomm0
     command: /app/ptouch-web usb
     restart: always
